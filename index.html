@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Hackathon Platform</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Global state
+        const initialState = {
+            hackathons: [
+                { id: 1, title: 'AI Innovation Challenge 2024', status: 'Active', participants: 0 },
+                { id: 2, title: 'Web3 Hackathon', status: 'Active', participants: 0 }
+            ],
+            teams: [],
+            problems: [],
+            submissions: [],
+            users: [{ email: 'admin@hack.com', password: 'admin', role: 'admin', name: 'Admin' }],
+            currentUser: null,
+            selectedHackathon: null
+        };
+
+        function Login({ onLogin, onSignup, users }) {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const user = users.find(u => u.email === email && u.password === password);
+                if (user) {
+                    onLogin(user);
+                } else {
+                    alert('Invalid credentials');
+                }
+            };
+
+            return (
+                <div className="login-page">
+                    <div className="login-card">
+                        <h1>Virtual Hackathon Platform</h1>
+                        <form onSubmit={handleSubmit}>
+                            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                            <button type="submit">Login</button>
+                        </form>
+                        <p>Don't have an account? <a onClick={onSignup}>Sign up</a></p>
+                        <p style={{fontSize: '0.8rem', marginTop: '1rem'}}>Demo: admin@hack.com / admin</p>
+                    </div>
+                </div>
+            );
+        }
+
+        function Signup({ onSignup, onLogin, addUser }) {
+            const [name, setName] = useState('');
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                addUser({ email, password, name, role: 'user' });
+                onSignup();
+            };
+
+            return (
+                <div className="login-page">
+                    <div className="login-card">
+                        <h1>Join Hackathon</h1>
+                        <form onSubmit={handleSubmit}>
+                            <input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} required />
+                            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                            <button type="submit">Sign Up</button>
+                        </form>
+                        <p>Already have an account? <a onClick={onLogin}>Login</a></p>
+                    </div>
+                </div>
+            );
+        }
+
+        function HackathonsList({ hackathons, onSelectHackathon }) {
+            return (
+                <div>
+                    <h2>Available Hackathons</h2>
+                    <div className="hackathons-grid">
+                        {hackathons.map(hack => (
+                            <div key={hack.id} className="hackathon-card" onClick={() => onSelectHackathon(hack)}>
+                                <h3>{hack.title}</h3>
+                                <p>Status: <span className="status available">{hack.status}</span></p>
+                                <p>Participants: {hack.participants}</p>
+                                <button className="btn-primary">Join Hackathon</button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function Dashboard({ hackathons, teams, problems, submissions, selectedHackathon }) {
+            const filteredTeams = selectedHackathon ? teams.filter(t => t.hackathonId === selectedHackathon.id) : teams;
+            const filteredProblems = selectedHackathon ? problems.filter(p => p.hackathonId === selectedHackathon.id) : problems;
+            const filteredSubmissions = selectedHackathon ? submissions.filter(s => s.hackathonId === selectedHackathon.id) : submissions;
+
+            return (
+                <div>
+                    <h2>{selectedHackathon ? selectedHackathon.title : 'Dashboard'}</h2>
+                    {selectedHackathon && (
+                        <div style={{ background: 'white', padding: '1.5rem', borderRadius: '16px', marginBottom: '2rem', border: '1px solid #e2e8f0' }}>
+                            <p style={{ fontSize: '1.1rem', color: '#64748b', marginBottom: '0.5rem' }}>Status: <span className="status available">{selectedHackathon.status}</span></p>
+                            <p style={{ fontSize: '1rem', color: '#64748b' }}>Total Participants: {selectedHackathon.participants}</p>
+                        </div>
+                    )}
+                    <div className="stats">
+                        <div className="stat-card">
+                            <h3>{selectedHackathon ? 'Teams in this Hackathon' : 'Active Teams'}</h3>
+                            <div className="count">{filteredTeams.length}</div>
+                        </div>
+                        <div className="stat-card">
+                            <h3>{selectedHackathon ? 'Problems in this Hackathon' : 'Problems'}</h3>
+                            <div className="count">{filteredProblems.length}</div>
+                        </div>
+                        <div className="stat-card">
+                            <h3>{selectedHackathon ? 'Submissions in this Hackathon' : 'Submissions'}</h3>
+                            <div className="count">{filteredSubmissions.length}</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function Teams({ teams, addTeam, joinTeam, addMemberToTeam, removeMemberFromTeam, deleteTeam, currentUser, selectedHackathon, users }) {
+            const [teamName, setTeamName] = useState('');
+            const [showForm, setShowForm] = useState(false);
+            const [showJoinForm, setShowJoinForm] = useState(false);
+            const [selectedTeam, setSelectedTeam] = useState('');
+            const [showAddMember, setShowAddMember] = useState(null);
+            const [memberEmail, setMemberEmail] = useState('');
+
+            const handleCreate = (e) => {
+                e.preventDefault();
+                addTeam({ name: teamName, members: [currentUser.name], hackathonId: selectedHackathon?.id, maxMembers: 4, createdBy: currentUser.name });
+                setTeamName('');
+                setShowForm(false);
+            };
+
+            const handleJoin = (e) => {
+                e.preventDefault();
+                if (selectedTeam !== '') {
+                    const filteredTeams = selectedHackathon ? teams.filter(t => t.hackathonId === selectedHackathon.id) : teams;
+                    const teamIndex = teams.indexOf(filteredTeams[parseInt(selectedTeam)]);
+                    joinTeam(teamIndex, currentUser.name);
+                    setSelectedTeam('');
+                    setShowJoinForm(false);
+                }
+            };
+
+            const handleAddMember = (e, teamIdx) => {
+                e.preventDefault();
+                const user = users.find(u => u.email === memberEmail);
+                if (user) {
+                    if (teams[teamIdx].members.includes(user.name)) {
+                        alert('User is already in the team');
+                    } else {
+                        addMemberToTeam(teamIdx, user.name);
+                        setMemberEmail('');
+                        setShowAddMember(null);
+                        alert('Member added successfully!');
+                    }
+                } else {
+                    alert('User not found. Please check the email address.');
+                }
+            };
+
+            const handleRemoveMember = (teamIdx, memberName) => {
+                if (confirm(`Remove ${memberName} from the team?`)) {
+                    removeMemberFromTeam(teamIdx, memberName);
+                }
+            };
+
+            const handleDeleteTeam = (teamIdx, team) => {
+                if (confirm(`Delete team "${team.name}"? This action cannot be undone.`)) {
+                    deleteTeam(teamIdx);
+                }
+            };
+
+            const filteredTeams = selectedHackathon ? teams.filter(t => t.hackathonId === selectedHackathon.id) : teams;
+            const availableTeams = filteredTeams.filter(team => 
+                team.members.length < team.maxMembers && 
+                !team.members.includes(currentUser.name)
+            );
+
+            return (
+                <div>
+                    <h2>Team Formation</h2>
+                    <div style={{ marginBottom: '2rem' }}>
+                        <button className="btn-primary" onClick={() => { setShowForm(!showForm); setShowJoinForm(false); }}>Create Team</button>
+                        <button className="btn-secondary" onClick={() => { setShowJoinForm(!showJoinForm); setShowForm(false); }}>Join Existing Team</button>
+                    </div>
+                    
+                    {showForm && (
+                        <div className="submission-form" style={{ marginBottom: '2rem' }}>
+                            <h3>Create New Team</h3>
+                            <form onSubmit={handleCreate}>
+                                <input type="text" placeholder="Team Name" value={teamName} onChange={(e) => setTeamName(e.target.value)} required />
+                                <button type="submit" className="btn-primary">Create Team</button>
+                            </form>
+                        </div>
+                    )}
+
+                    {showJoinForm && (
+                        <div className="submission-form" style={{ marginBottom: '2rem' }}>
+                            <h3>Join Existing Team</h3>
+                            {availableTeams.length === 0 ? (
+                                <p style={{ color: '#64748b' }}>
+                                    {filteredTeams.length === 0 
+                                        ? 'No teams created yet. Create a new team to get started.' 
+                                        : filteredTeams.every(t => t.members.includes(currentUser.name))
+                                        ? 'You are already a member of all available teams.'
+                                        : 'All teams are currently full. Create a new team or wait for a spot to open.'}
+                                </p>
+                            ) : (
+                                <form onSubmit={handleJoin}>
+                                    <select value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)} required>
+                                        <option value="">Select a team</option>
+                                        {availableTeams.map((team, idx) => {
+                                            const actualIdx = filteredTeams.indexOf(team);
+                                            return (
+                                                <option key={idx} value={actualIdx}>{team.name} ({team.members.length}/{team.maxMembers} members)</option>
+                                            );
+                                        })}
+                                    </select>
+                                    <button type="submit" className="btn-primary">Join Team</button>
+                                </form>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="teams-grid">
+                        {filteredTeams.length === 0 ? (
+                            <p>No teams created yet.</p>
+                        ) : (
+                            filteredTeams.map((team, idx) => {
+                                const actualIdx = teams.indexOf(team);
+                                const isCreator = team.createdBy === currentUser.name;
+                                const isMember = team.members.includes(currentUser.name);
+                                
+                                return (
+                                    <div key={idx} className="team-card">
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <h3 style={{ margin: 0 }}>{team.name}</h3>
+                                            {isCreator && (
+                                                <button 
+                                                    onClick={() => handleDeleteTeam(actualIdx, team)} 
+                                                    style={{ background: '#ef4444', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '600' }}
+                                                >
+                                                    Delete Team
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p><strong>Members: {team.members.length}/{team.maxMembers}</strong></p>
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            {team.members.map((member, i) => (
+                                                <div key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '0.25rem 0.75rem', background: '#e0e7ff', borderRadius: '20px', margin: '0.25rem', fontSize: '0.9rem' }}>
+                                                    <span>{member}</span>
+                                                    {isCreator && member !== currentUser.name && (
+                                                        <button 
+                                                            onClick={() => handleRemoveMember(actualIdx, member)}
+                                                            style={{ background: 'transparent', border: 'none', color: '#ef4444', marginLeft: '0.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: 'bold' }}
+                                                            title="Remove member"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <span className={`status ${team.members.length < team.maxMembers ? 'available' : 'full'}`}>
+                                            {team.members.length < team.maxMembers ? 'Open' : 'Full'}
+                                        </span>
+                                        
+                                        {isMember && team.members.length < team.maxMembers && (
+                                            <>
+                                                <button className="btn-secondary" onClick={() => setShowAddMember(showAddMember === actualIdx ? null : actualIdx)}>Add Member</button>
+                                                {showAddMember === actualIdx && (
+                                                    <div style={{ marginTop: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '10px' }}>
+                                                        <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: '#64748b' }}>Enter the email of a registered user</p>
+                                                        <form onSubmit={(e) => handleAddMember(e, actualIdx)}>
+                                                            <input 
+                                                                type="email" 
+                                                                placeholder="Member Email" 
+                                                                value={memberEmail} 
+                                                                onChange={(e) => setMemberEmail(e.target.value)} 
+                                                                required 
+                                                                style={{ padding: '0.75rem', borderRadius: '8px', border: '2px solid #e2e8f0', width: '100%', marginBottom: '0.5rem' }}
+                                                            />
+                                                            <button type="submit" className="btn-primary">Add Member</button>
+                                                        </form>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        
+                                        {team.members.length < team.maxMembers && !isMember && (
+                                            <button className="btn-secondary" onClick={() => joinTeam(actualIdx, currentUser.name)}>Join Team</button>
+                                        )}
+                                        
+                                        {isMember && !isCreator && (
+                                            <button 
+                                                onClick={() => handleRemoveMember(actualIdx, currentUser.name)} 
+                                                style={{ background: '#f59e0b', color: 'white', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '10px', cursor: 'pointer', fontSize: '1rem', fontWeight: '600', marginTop: '0.5rem' }}
+                                            >
+                                                Leave Team
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function Problems({ problems, selectedHackathon }) {
+            const filteredProblems = selectedHackathon ? problems.filter(p => p.hackathonId === selectedHackathon.id) : problems;
+
+            return (
+                <div>
+                    <h2>Problem Statements</h2>
+                    <div className="problems-list">
+                        {filteredProblems.length === 0 ? (
+                            <p>No problems available yet.</p>
+                        ) : (
+                            filteredProblems.map((problem, idx) => (
+                                <div key={idx} className="problem-card">
+                                    <h3>{problem.title}</h3>
+                                    <p className="difficulty">Difficulty: {problem.difficulty}</p>
+                                    <p>{problem.description}</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function Submissions({ submissions, addSubmission, selectedHackathon, currentUser }) {
+            const [title, setTitle] = useState('');
+            const [description, setDescription] = useState('');
+            const [github, setGithub] = useState('');
+            const [demo, setDemo] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                addSubmission({ 
+                    title, 
+                    description, 
+                    github, 
+                    demo, 
+                    hackathonId: selectedHackathon?.id,
+                    submittedBy: currentUser.name,
+                    submittedAt: new Date().toLocaleString()
+                });
+                setTitle('');
+                setDescription('');
+                setGithub('');
+                setDemo('');
+                alert('Submission received!');
+            };
+
+            const filteredSubmissions = selectedHackathon ? submissions.filter(s => s.hackathonId === selectedHackathon.id) : submissions;
+
+            return (
+                <div>
+                    <h2>Submissions</h2>
+                    <div className="submission-form">
+                        <h3>Submit Your Solution</h3>
+                        <form onSubmit={handleSubmit}>
+                            <input type="text" placeholder="Project Title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                            <textarea placeholder="Project Description" value={description} onChange={(e) => setDescription(e.target.value)} required></textarea>
+                            <input type="url" placeholder="GitHub Repository URL" value={github} onChange={(e) => setGithub(e.target.value)} required />
+                            <input type="url" placeholder="Live Demo URL" value={demo} onChange={(e) => setDemo(e.target.value)} />
+                            <button type="submit" className="btn-primary">Submit Project</button>
+                        </form>
+                    </div>
+                    <div className="submissions-list">
+                        {filteredSubmissions.length === 0 ? (
+                            <p>No submissions yet.</p>
+                        ) : (
+                            filteredSubmissions.map((sub, idx) => (
+                                <div key={idx} className="submission-card">
+                                    <h4>{sub.title}</h4>
+                                    <p>{sub.description}</p>
+                                    <p>{sub.submittedBy} • {sub.submittedAt}</p>
+                                    <p><a href={sub.github} target="_blank">GitHub</a> {sub.demo && <a href={sub.demo} target="_blank">Demo</a>}</p>
+                                    <span className="status submitted">Submitted</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function Results({ submissions, selectedHackathon }) {
+            const filteredSubmissions = selectedHackathon ? submissions.filter(s => s.hackathonId === selectedHackathon.id) : submissions;
+            const evaluatedSubmissions = filteredSubmissions.filter(s => s.score !== undefined);
+            const sortedSubmissions = [...evaluatedSubmissions].sort((a, b) => b.score - a.score);
+
+            return (
+                <div>
+                    <h2>Results & Leaderboard</h2>
+                    <div className="results-list">
+                        {sortedSubmissions.length === 0 ? (
+                            <p>No evaluated submissions yet. Admin needs to evaluate submissions first.</p>
+                        ) : (
+                            sortedSubmissions.map((sub, idx) => (
+                                <div key={idx} className="result-card">
+                                    <div className="rank">#{idx + 1}</div>
+                                    <div style={{ flex: 1 }}>
+                                        <h3>{sub.title}</h3>
+                                        <p>By: {sub.submittedBy}</p>
+                                        <p><a href={sub.github} target="_blank">View Project</a></p>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1e3a8a' }}>{sub.score}</div>
+                                        <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Score</div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function AdminPanel({ hackathons, problems, users, submissions, addHackathon, addProblem, deleteUser, evaluateSubmission }) {
+            const [hackTitle, setHackTitle] = useState('');
+            const [probTitle, setProbTitle] = useState('');
+            const [probDesc, setProbDesc] = useState('');
+            const [probDiff, setProbDiff] = useState('Medium');
+            const [hackId, setHackId] = useState('');
+            const [evalHackId, setEvalHackId] = useState('');
+
+            const handleAddHackathon = (e) => {
+                e.preventDefault();
+                addHackathon({ title: hackTitle, status: 'Active', participants: 0 });
+                setHackTitle('');
+            };
+
+            const handleAddProblem = (e) => {
+                e.preventDefault();
+                addProblem({ title: probTitle, description: probDesc, difficulty: probDiff, hackathonId: parseInt(hackId) });
+                setProbTitle('');
+                setProbDesc('');
+            };
+
+            const handleEvaluate = (subIdx, score) => {
+                evaluateSubmission(subIdx, parseInt(score));
+            };
+
+            const filteredSubmissions = evalHackId ? submissions.filter(s => s.hackathonId === parseInt(evalHackId)) : [];
+
+            return (
+                <div>
+                    <h2>Admin Panel</h2>
+                    
+                    <div className="admin-section">
+                        <h3>Add Hackathon</h3>
+                        <form onSubmit={handleAddHackathon}>
+                            <input type="text" placeholder="Hackathon Title" value={hackTitle} onChange={(e) => setHackTitle(e.target.value)} required />
+                            <button type="submit" className="btn-primary">Add Hackathon</button>
+                        </form>
+                    </div>
+
+                    <div className="admin-section">
+                        <h3>Add Problem</h3>
+                        <form onSubmit={handleAddProblem}>
+                            <select value={hackId} onChange={(e) => setHackId(e.target.value)} required>
+                                <option value="">Select Hackathon</option>
+                                {hackathons.map(h => <option key={h.id} value={h.id}>{h.title}</option>)}
+                            </select>
+                            <input type="text" placeholder="Problem Title" value={probTitle} onChange={(e) => setProbTitle(e.target.value)} required />
+                            <textarea placeholder="Problem Description" value={probDesc} onChange={(e) => setProbDesc(e.target.value)} required></textarea>
+                            <select value={probDiff} onChange={(e) => setProbDiff(e.target.value)}>
+                                <option>Easy</option>
+                                <option>Medium</option>
+                                <option>Hard</option>
+                            </select>
+                            <button type="submit" className="btn-primary">Add Problem</button>
+                        </form>
+                    </div>
+
+                    <div className="admin-section">
+                        <h3>Evaluate Submissions</h3>
+                        <select value={evalHackId} onChange={(e) => setEvalHackId(e.target.value)} style={{ marginBottom: '1rem' }}>
+                            <option value="">Select Hackathon</option>
+                            {hackathons.map(h => <option key={h.id} value={h.id}>{h.title}</option>)}
+                        </select>
+                        
+                        {filteredSubmissions.length === 0 ? (
+                            <p style={{ color: '#64748b' }}>No submissions to evaluate</p>
+                        ) : (
+                            <div style={{ display: 'grid', gap: '1rem' }}>
+                                {filteredSubmissions.map((sub, idx) => {
+                                    const actualIdx = submissions.indexOf(sub);
+                                    return (
+                                        <div key={idx} style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                            <h4 style={{ marginBottom: '0.5rem', color: '#0f172a' }}>{sub.title}</h4>
+                                            <p style={{ color: '#64748b', marginBottom: '0.5rem' }}>By: {sub.submittedBy}</p>
+                                            <p style={{ color: '#64748b', marginBottom: '1rem', fontSize: '0.9rem' }}>{sub.description}</p>
+                                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+                                                <a href={sub.github} target="_blank" style={{ color: '#1e3a8a', fontWeight: '600' }}>GitHub</a>
+                                                {sub.demo && <a href={sub.demo} target="_blank" style={{ color: '#1e3a8a', fontWeight: '600' }}>Demo</a>}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                                <input 
+                                                    type="number" 
+                                                    placeholder="Score (0-100)" 
+                                                    min="0" 
+                                                    max="100"
+                                                    defaultValue={sub.score || ''}
+                                                    id={`score-${actualIdx}`}
+                                                    style={{ padding: '0.75rem', borderRadius: '8px', border: '2px solid #e2e8f0', width: '150px' }}
+                                                />
+                                                <button 
+                                                    className="btn-primary" 
+                                                    onClick={() => {
+                                                        const score = document.getElementById(`score-${actualIdx}`).value;
+                                                        if (score) handleEvaluate(actualIdx, score);
+                                                    }}
+                                                >
+                                                    {sub.score ? 'Update Score' : 'Evaluate'}
+                                                </button>
+                                                {sub.score && <span style={{ color: '#10b981', fontWeight: '600' }}>Current Score: {sub.score}/100</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="admin-section">
+                        <h3>Manage Users</h3>
+                        <div className="users-list">
+                            {users.map((user, idx) => (
+                                <div key={idx} className="user-item">
+                                    <span>{user.name} ({user.email}) - {user.role}</span>
+                                    {user.role !== 'admin' && (
+                                        <button className="btn-secondary" onClick={() => deleteUser(idx)}>Remove</button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function Platform({ currentUser, onLogout, state, setState }) {
+            const [activeTab, setActiveTab] = useState('hackathons');
+
+            const addTeam = (team) => setState({ ...state, teams: [...state.teams, { ...team, id: Date.now() }] });
+            const joinTeam = (idx, member) => {
+                const newTeams = [...state.teams];
+                if (newTeams[idx].members.length < newTeams[idx].maxMembers) {
+                    newTeams[idx].members.push(member);
+                    setState({ ...state, teams: newTeams });
+                }
+            };
+            const addMemberToTeam = (idx, member) => {
+                const newTeams = [...state.teams];
+                if (newTeams[idx].members.length < newTeams[idx].maxMembers && !newTeams[idx].members.includes(member)) {
+                    newTeams[idx].members.push(member);
+                    setState({ ...state, teams: newTeams });
+                }
+            };
+            const removeMemberFromTeam = (idx, member) => {
+                const newTeams = [...state.teams];
+                newTeams[idx].members = newTeams[idx].members.filter(m => m !== member);
+                if (newTeams[idx].members.length === 0) {
+                    newTeams.splice(idx, 1);
+                }
+                setState({ ...state, teams: newTeams });
+            };
+            const deleteTeam = (idx) => {
+                const newTeams = state.teams.filter((_, i) => i !== idx);
+                setState({ ...state, teams: newTeams });
+            };
+            const evaluateSubmission = (idx, score) => {
+                const newSubmissions = [...state.submissions];
+                newSubmissions[idx].score = score;
+                setState({ ...state, submissions: newSubmissions });
+                alert('Submission evaluated successfully!');
+            };
+            const addSubmission = (sub) => setState({ ...state, submissions: [...state.submissions, { ...sub, id: Date.now() }] });
+            const addHackathon = (hack) => setState({ ...state, hackathons: [...state.hackathons, { ...hack, id: Date.now() }] });
+            const addProblem = (prob) => setState({ ...state, problems: [...state.problems, { ...prob, id: Date.now() }] });
+            const deleteUser = (idx) => {
+                const newUsers = state.users.filter((_, i) => i !== idx);
+                setState({ ...state, users: newUsers });
+            };
+
+            const selectHackathon = (hack) => {
+                setState({ ...state, selectedHackathon: hack });
+                setActiveTab('dashboard');
+            };
+
+            return (
+                <>
+                    <header>
+                        <h1>Virtual Hackathon Platform</h1>
+                        <nav>
+                            <a onClick={() => setActiveTab('hackathons')}>Hackathons</a>
+                            {state.selectedHackathon && <a onClick={() => setActiveTab('dashboard')}>Dashboard</a>}
+                            {state.selectedHackathon && <a onClick={() => setActiveTab('teams')}>Teams</a>}
+                            {state.selectedHackathon && <a onClick={() => setActiveTab('problems')}>Problems</a>}
+                            {state.selectedHackathon && <a onClick={() => setActiveTab('submissions')}>Submissions</a>}
+                            {state.selectedHackathon && <a onClick={() => setActiveTab('results')}>Results</a>}
+                            {currentUser.role === 'admin' && <a onClick={() => setActiveTab('admin')}>Admin</a>}
+                            <a onClick={onLogout} style={{marginLeft: 'auto'}}>Logout</a>
+                        </nav>
+                    </header>
+                    <main>
+                        {activeTab === 'hackathons' && <HackathonsList hackathons={state.hackathons} onSelectHackathon={selectHackathon} />}
+                        {activeTab === 'dashboard' && <Dashboard hackathons={state.hackathons} teams={state.teams} problems={state.problems} submissions={state.submissions} selectedHackathon={state.selectedHackathon} />}
+                        {activeTab === 'teams' && <Teams teams={state.teams} addTeam={addTeam} joinTeam={joinTeam} addMemberToTeam={addMemberToTeam} removeMemberFromTeam={removeMemberFromTeam} deleteTeam={deleteTeam} currentUser={currentUser} selectedHackathon={state.selectedHackathon} users={state.users} />}
+                        {activeTab === 'problems' && <Problems problems={state.problems} selectedHackathon={state.selectedHackathon} />}
+                        {activeTab === 'submissions' && <Submissions submissions={state.submissions} addSubmission={addSubmission} selectedHackathon={state.selectedHackathon} currentUser={currentUser} />}
+                        {activeTab === 'results' && <Results submissions={state.submissions} selectedHackathon={state.selectedHackathon} />}
+                        {activeTab === 'admin' && currentUser.role === 'admin' && <AdminPanel hackathons={state.hackathons} problems={state.problems} users={state.users} submissions={state.submissions} addHackathon={addHackathon} addProblem={addProblem} deleteUser={deleteUser} evaluateSubmission={evaluateSubmission} />}
+                    </main>
+                </>
+            );
+        }
+
+        function App() {
+            const [view, setView] = useState('login');
+            const [state, setState] = useState(() => {
+                const saved = localStorage.getItem('hackathonState');
+                return saved ? JSON.parse(saved) : initialState;
+            });
+
+            React.useEffect(() => {
+                localStorage.setItem('hackathonState', JSON.stringify(state));
+            }, [state]);
+
+            const handleLogin = (user) => {
+                setState({ ...state, currentUser: user });
+                setView('platform');
+            };
+
+            const addUser = (user) => {
+                setState({ ...state, users: [...state.users, user] });
+            };
+
+            const handleLogout = () => {
+                setState({ ...state, currentUser: null, selectedHackathon: null });
+                setView('login');
+            };
+
+            return (
+                <>
+                    {view === 'login' && <Login onLogin={handleLogin} onSignup={() => setView('signup')} users={state.users} />}
+                    {view === 'signup' && <Signup onSignup={() => setView('login')} onLogin={() => setView('login')} addUser={addUser} />}
+                    {view === 'platform' && <Platform currentUser={state.currentUser} onLogout={handleLogout} state={state} setState={setState} />}
+                </>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
