@@ -53,7 +53,7 @@ function Platform({ currentUser, onLogout, state, setState }) {
 
     const selectHackathon = (hack) => {
         setState({ ...state, selectedHackathon: hack });
-        setActiveTab('dashboard');
+        setActiveTab('teams');
     };
 
     return (
@@ -62,7 +62,6 @@ function Platform({ currentUser, onLogout, state, setState }) {
                 <h1>Virtual Hackathon Platform</h1>
                 <nav>
                     <a onClick={() => setActiveTab('hackathons')}>Hackathons</a>
-                    {state.selectedHackathon && <a onClick={() => setActiveTab('dashboard')}>Dashboard</a>}
                     {state.selectedHackathon && <a onClick={() => setActiveTab('teams')}>Teams</a>}
                     {state.selectedHackathon && <a onClick={() => setActiveTab('problems')}>Problems</a>}
                     {state.selectedHackathon && <a onClick={() => setActiveTab('submissions')}>Submissions</a>}
@@ -73,7 +72,6 @@ function Platform({ currentUser, onLogout, state, setState }) {
             </header>
             <main>
                 {activeTab === 'hackathons' && <HackathonsList hackathons={state.hackathons} onSelectHackathon={selectHackathon} />}
-                {activeTab === 'dashboard' && <Dashboard hackathons={state.hackathons} teams={state.teams} problems={state.problems} submissions={state.submissions} selectedHackathon={state.selectedHackathon} />}
                 {activeTab === 'teams' && <Teams teams={state.teams} addTeam={addTeam} joinTeam={joinTeam} addMemberToTeam={addMemberToTeam} removeMemberFromTeam={removeMemberFromTeam} deleteTeam={deleteTeam} currentUser={currentUser} selectedHackathon={state.selectedHackathon} users={state.users} />}
                 {activeTab === 'problems' && <Problems problems={state.problems} selectedHackathon={state.selectedHackathon} />}
                 {activeTab === 'submissions' && <Submissions submissions={state.submissions} addSubmission={addSubmission} selectedHackathon={state.selectedHackathon} currentUser={currentUser} />}
