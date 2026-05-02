@@ -2,38 +2,44 @@ import React, { useState, useEffect } from 'react';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import Platform from './components/Platform';
-import { initialState } from './initialState';
+import { api } from './api';
 
 function App() {
     const [view, setView] = useState('login');
-    const [state, setState] = useState(() => {
-        const saved = localStorage.getItem('hackathonState');
-        return saved ? JSON.parse(saved) : initialState;
-    });
+    const [currentUser, setCurrentUser] = useState(null);
+    const [state, setState] = useState({ hackathons: [], teams: [], problems: [], submissions: [], users: [], selectedHackathon: null });
+    const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        localStorage.setItem('hackathonState', JSON.stringify(state));
-    }, [state]);
+    const loadAll = async () => {
+        setLoading(true);
+        try {
+            const [hackathons, teams, problems, submissions, users] = await Promise.all([
+                api.getHackathons(), api.getTeams(), api.getProblems(), api.getSubmissions(), api.getUsers()
+            ]);
+            setState(s => ({ ...s, hackathons, teams, problems, submissions, users }));
+        } catch (e) { console.error(e); }
+        setLoading(false);
+    };
 
-    const handleLogin = (user) => {
-        setState({ ...state, currentUser: user });
+    const handleLogin = async (user) => {
+        setCurrentUser(user);
+        await loadAll();
         setView('platform');
     };
 
-    const addUser = (user) => {
-        setState({ ...state, users: [...state.users, user] });
-    };
-
     const handleLogout = () => {
-        setState({ ...state, currentUser: null, selectedHackathon: null });
+        setCurrentUser(null);
+        setState(s => ({ ...s, selectedHackathon: null }));
         setView('login');
     };
 
+    if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: '1.2rem', color: '#1e3a8a' }}>Loading...</div>;
+
     return (
         <>
-            {view === 'login' && <Login onLogin={handleLogin} onSignup={() => setView('signup')} users={state.users} />}
-            {view === 'signup' && <Signup onSignup={() => setView('login')} onLogin={() => setView('login')} addUser={addUser} />}
-            {view === 'platform' && <Platform currentUser={state.currentUser} onLogout={handleLogout} state={state} setState={setState} />}
+            {view === 'login' && <Login onLogin={handleLogin} onSignup={() => setView('signup')} />}
+            {view === 'signup' && <Signup onSignup={() => setView('login')} onLogin={() => setView('login')} />}
+            {view === 'platform' && <Platform currentUser={currentUser} onLogout={handleLogout} state={state} setState={setState} reload={loadAll} />}
         </>
     );
 }

@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
+import { api } from '../api';
 
-function Login({ onLogin, onSignup, users }) {
+function Login({ onLogin, onSignup }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const user = users.find(u => u.email === email && u.password === password);
-        if (user) {
+        setError('');
+        try {
+            const user = await api.login({ email, password });
             onLogin(user);
-        } else {
-            alert('Invalid credentials');
-        }
+        } catch (e) { setError(e.message); }
     };
 
     return (
@@ -21,10 +22,11 @@ function Login({ onLogin, onSignup, users }) {
                 <form onSubmit={handleSubmit}>
                     <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
                     <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    {error && <p style={{ color: '#ef4444', margin: '0.5rem 0' }}>{error}</p>}
                     <button type="submit">Login</button>
                 </form>
                 <p>Don't have an account? <a onClick={onSignup}>Sign up</a></p>
-                <p style={{fontSize: '0.8rem', marginTop: '1rem'}}>Demo: admin@hack.com / admin</p>
+                <p style={{ fontSize: '0.8rem', marginTop: '1rem' }}>Demo: admin@hack.com / admin</p>
             </div>
         </div>
     );

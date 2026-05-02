@@ -1,23 +1,19 @@
 import React from 'react';
 
 function Problems({ problems, selectedHackathon }) {
-    const filteredProblems = selectedHackathon ? problems.filter(p => p.hackathonId === selectedHackathon.id) : problems;
+    const filtered = selectedHackathon ? problems.filter(p => p.hackathon_id === selectedHackathon.id) : problems;
 
     return (
         <div>
             <h2>Problem Statements</h2>
             <div className="problems-list">
-                {filteredProblems.length === 0 ? (
-                    <p>No problems available yet.</p>
-                ) : (
-                    filteredProblems.map((problem, idx) => (
-                        <div key={idx} className="problem-card">
-                            <h3>{problem.title}</h3>
-                            <p className="difficulty">Difficulty: {problem.difficulty}</p>
-                            <p>{problem.description}</p>
-                        </div>
-                    ))
-                )}
+                {filtered.length === 0 ? <p>No problems available yet.</p> : filtered.map((p) => (
+                    <div key={p.id} className="problem-card">
+                        <h3>{p.title}</h3>
+                        <p className="difficulty">Difficulty: {p.difficulty}</p>
+                        <p>{p.description}</p>
+                    </div>
+                ))}
             </div>
         </div>
     );
