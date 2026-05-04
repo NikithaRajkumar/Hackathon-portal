@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:5000/api';
+const BASE = 'http://localhost:8080/api';
 
 const req = async (method, url, body, isForm = false) => {
     const opts = { method, headers: isForm ? {} : { 'Content-Type': 'application/json' } };
@@ -35,4 +35,6 @@ export const api = {
     getSubmissions: () => req('GET', '/submissions'),
     addSubmission: (formData) => req('POST', '/submissions', formData, true),
     evaluateSubmission: (id, body) => req('PUT', `/submissions/${id}/evaluate`, body),
+    updatePreferences: (id, body) => req('PATCH', `/users/${id}/preferences`, body),
+    getHackathonsByTag: (tag) => req('GET', `/hackathons/tag/${tag}`),
 };

@@ -1,40 +1,44 @@
 # Virtual Hackathon Platform
 
-A full-stack hackathon management platform built with React + Node.js + PostgreSQL.
+Full-stack hackathon management platform — React + Spring Boot + PostgreSQL.
 
 ## Setup
 
 ### Prerequisites
+- Java 17+
+- Maven
 - Node.js
 - PostgreSQL
 
-### Backend
+### Backend (Spring Boot)
 ```bash
 cd server
-cp .env.example .env   # fill in your DB credentials and email
-npm install
-npm run dev
+# Edit src/main/resources/application.properties with your DB credentials
+mvn spring-boot:run
 ```
+Runs on http://localhost:8080
 
-### Frontend
+### Frontend (React)
 ```bash
 cd react-app
 npm install
 npm run dev
 ```
+Runs on http://localhost:3000
 
 ### PostgreSQL
-Create a database named `hackathon_db` and update `.env` with your credentials. Tables are auto-created on first run.
+Create a database named `hackathon_db`. Tables are auto-created on first run.
 
 ## Features
-- JWT-free auth with bcrypt password hashing
+- bcrypt password hashing
 - Team creation, join, rename, delete, add/remove members
 - File upload for submissions (max 10MB)
 - Admin: add/edit/delete hackathons and problems
-- Admin: evaluate submissions with score 0-100
+- Admin: evaluate submissions with score + feedback
 - Email notifications (signup, submission, evaluation)
 - Leaderboard sorted by score
-- PostgreSQL database
+- JSONB fields: rules, constraints, links, evaluation, preferences, metadata
+- PostgreSQL with Spring Data JPA
 
 ## Default Admin
 - Email: `admin@hack.com`

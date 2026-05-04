@@ -2,7 +2,7 @@ import React from 'react';
 
 function Results({ submissions, selectedHackathon }) {
     const filtered = selectedHackathon ? submissions.filter(s => s.hackathon_id === selectedHackathon.id) : submissions;
-    const sorted = [...filtered].filter(s => s.score != null).sort((a, b) => b.score - a.score);
+    const sorted = [...filtered].filter(s => s.evaluation?.score != null).sort((a, b) => b.evaluation.score - a.evaluation.score);
 
     return (
         <div>
@@ -14,10 +14,11 @@ function Results({ submissions, selectedHackathon }) {
                         <div style={{ flex: 1 }}>
                             <h3>{sub.title}</h3>
                             <p>By: {sub.submitted_by}</p>
-                            <a href={sub.github} target="_blank" rel="noreferrer">View Project</a>
+                            {sub.evaluation?.feedback && <p style={{color:'#64748b',fontSize:'0.9rem'}}>{sub.evaluation.feedback}</p>}
+                            <a href={sub.links?.github} target="_blank" rel="noreferrer">View Project</a>
                         </div>
                         <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1e3a8a' }}>{sub.score}</div>
+                            <div style={{ fontSize: '2rem', fontWeight: '700', color: '#1e3a8a' }}>{sub.evaluation.score}</div>
                             <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Score</div>
                         </div>
                     </div>

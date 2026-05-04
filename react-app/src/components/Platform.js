@@ -43,8 +43,8 @@ function Platform({ currentUser, onLogout, state, setState, reload }) {
     const updateProblem = async (id, body) => { await api.updateProblem(id, body); await refresh(); };
     const deleteProblem = async (id) => { await api.deleteProblem(id); await refresh(); };
     const deleteUser = async (id) => { await api.deleteUser(id); await refresh(); };
-    const evaluateSubmission = async (id, score, user_email, title) => {
-        await api.evaluateSubmission(id, { score, user_email, title });
+    const evaluateSubmission = async (id, score, user_email, title, feedback) => {
+        await api.evaluateSubmission(id, { score, feedback, user_email, title });
         await refresh();
     };
 

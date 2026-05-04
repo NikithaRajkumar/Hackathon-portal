@@ -54,10 +54,11 @@ function Submissions({ submissions, addSubmission, selectedHackathon, currentUse
                         <p>{sub.description}</p>
                         <p>{sub.submitted_by} • {new Date(sub.submitted_at).toLocaleString()}</p>
                         <p>
-                            <a href={sub.github} target="_blank" rel="noreferrer">GitHub</a>
-                            {sub.demo && <> · <a href={sub.demo} target="_blank" rel="noreferrer">Demo</a></>}
-                            {sub.file_path && <> · <a href={`http://localhost:5000/uploads/${sub.file_path}`} target="_blank" rel="noreferrer">Download File</a></>}
+                            <a href={sub.links?.github} target="_blank" rel="noreferrer">GitHub</a>
+                            {sub.links?.demo && <> · <a href={sub.links.demo} target="_blank" rel="noreferrer">Demo</a></>}
+                            {sub.file_path && <> · <a href={`http://localhost:8080/uploads/${sub.file_path}`} target="_blank" rel="noreferrer">Download File</a></>}
                         </p>
+                        {sub.evaluation?.score != null && <p style={{color:'#10b981',fontWeight:'600'}}>Score: {sub.evaluation.score}/100 {sub.evaluation.feedback && `— ${sub.evaluation.feedback}`}</p>}
                         <span className="status submitted">Submitted</span>
                     </div>
                 ))}
